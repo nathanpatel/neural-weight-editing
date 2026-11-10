@@ -195,10 +195,28 @@ Right & 1.436 & 2.626 \\
 \end{tabular}
 \end{center}
 
-The down score fell and the right score rose, while the other two scores were unchanged. Down still had the highest score, so the original failure remained. The robot moved right by two squares later in the episode, but then got stuck again and still failed to reach the goal.
+The down score fell and the right score rose, while the other two scores were unchanged. Down still had the highest score, so the original failure remained. The robot stayed at the same position and continued making invalid moves, so it still failed to reach the goal.
 
 The edit improved the difficult held-out success rate, excluding seed 30000, from 1 of 29 layouts (3.4\%) to 5 of 29 (17.2\%). It also reduced ordinary success from 31 of 50 layouts (62\%) to 27 of 50 (54\%). I cannot say exactly why the other layouts changed: the same final-layer weights are used in every state, so a local change can affect many states, but the results alone do not show that the edit was targeted or that the LLM understood the network.
 
 The earlier analytical edit changed 66 parameters, whereas the LLM changed 16, even though both edits had an L2 size of about 0.600. This is not a fair equal-budget comparison, and I do not take the result as proof that the LLM understood the network. It is a useful first sign that an LLM can make a sensible, measurable change to a model's internal behaviour, even when that change is not enough to solve the complete task.
+
+\subsection*{Milestone 4: a same-budget analytical control}
+
+I wanted to compare the LLM edit with the strongest mathematical edit available under exactly the same limits. At the failing state, each final-layer parameter has a measurable effect on the difference between the right and down scores. I ranked those effects and calculated the largest allowed improvement, while respecting the limit of 16 parameters, the per-parameter bound of 0.25, and the total L2 bound of 0.61.
+
+The original right-minus-down difference was about $-3.771$. The best possible improvement under these restrictions was about $2.424$, leaving down still ahead by about $1.348$. This shows that the action ranking cannot be reversed within this budget. The LLM's improvement was about $2.381, or 98.2\% of the analytical maximum, even though it was not given the analytical solution. This is the most interesting result so far: the LLM made a numerical change that was very close to the best possible change for this particular score difference.
+
+\begin{center}
+\begin{tabular}{lrrrr}
+Method & Target action & Target success & Ordinary & Difficult \\
+\hline
+Original & down & no & 31/50 & 1/29 \\
+LLM edit & down & no & 27/50 & 5/29 \\
+Same-budget analytical edit & down & no & 27/50 & 5/29 \\
+\end{tabular}
+\end{center}
+
+The two edits had the same aggregate success rates, although they did not change exactly the same ordinary layouts. This comparison concerns one action-score difference, not overall navigation, and neither edit fixed the route because the budget was too restrictive. It is a small controlled version of the question raised by the weight-space programming article, not a reproduction or validation of its wider findings.
 
 \end{document}
