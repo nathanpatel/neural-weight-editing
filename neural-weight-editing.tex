@@ -150,4 +150,26 @@ This records the observation before each expert move and uses the move as the ta
 \textbf{What I am doing next.}
 I am going to inspect this baseline and discuss what information would be needed to propose a safe weight edit. I will not add the LLM repair stage or the fine-tuning comparison until the evaluation criteria are clear.
 
+\subsection*{Milestone 2: a deliberately calculated weight edit}
+
+I wanted a control experiment before asking an LLM to suggest a weight edit. I changed the trained network analytically, so that I could separate the question ``can this model be changed in the right direction?'' from the question ``can an LLM find that change?''
+
+I kept the original model unchanged and edited only the final layer in a copy. At the failing state in seed 30000, I changed the rows for the expert action (right) and the original action (down). The update was the smallest symmetric change that made the right score exceed the down score by 0.1. It changed 66 parameters, with a maximum individual change of 0.093 and an overall L2 change of 0.600.
+
+The local decision was repaired: the scores for up, down, left and right changed from $[-4.411, 5.207, -3.977, 1.436]$ to $[-4.411, 3.272, -3.977, 3.372]$. Right was the highest score afterwards. However, this did not repair the whole route. The robot moved right from row 5, column 0 to row 5, column 2, then got stuck again and still failed to reach the goal.
+
+The edit reduced ordinary held-out success from 62\% to 48\%. On difficult layouts excluding the target scenario, success increased from 3.4\% to 24.1\%. This is an interesting but mixed result: a small edit changed behaviour beyond the original state, helping some difficult layouts while harming ordinary ones. It is not evidence that an LLM can reason about weights, and it does not show that the navigation problem has been solved.
+
+The essential part of the edit was:
+
+\begin{lstlisting}[language=Python]
+update = required_change * feature / (2 * feature_squared_norm)
+final_layer.weight[target] += update[:-1]
+final_layer.weight[original] -= update[:-1]
+\end{lstlisting}
+
+Here, \texttt{feature} is the hidden representation of the failing state with an extra 1 for the bias. The update is calculated directly; no gradient-based training is used.
+
+I will next consider how to describe a failure and an allowed edit to an LLM, while keeping the same checks for local repair, full-episode success and regressions.
+
 \end{document}
