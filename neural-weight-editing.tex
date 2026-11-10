@@ -219,4 +219,12 @@ Same-budget analytical edit & down & no & 27/50 & 5/29 \\
 
 The two edits had the same aggregate success rates, although they did not change exactly the same ordinary layouts. This comparison concerns one action-score difference, not overall navigation, and neither edit fixed the route because the budget was too restrictive. It is a small controlled version of the question raised by the weight-space programming article, not a reproduction or validation of its wider findings.
 
+\subsection*{Milestone 5: one shared edit across four failure states}
+
+The previous experiment only considered the first wrong decision in seed 30000. I wanted to ask a slightly broader question: could one small edit improve several poor decisions along the same route? I therefore selected the four distinct states on the expert route where the original policy either made an invalid move or moved further from the goal. I gave the LLM the network's final layer, hidden activations, action scores, expert actions and these four states, but not the held-out layouts or the analytical solution.
+
+The LLM returned one valid patch changing 16 final-layer weights. It improved the expert-action margin at all four states, although none of the four action choices changed. The robot still became stuck at the original obstacle and did not reach the goal. On the other layouts, ordinary success changed from 31/50 to 30/50, with 5 new successes and 6 regressions. Difficult success excluding the target changed from 1/29 to 3/29, with 3 new successes and 1 regression. The same-budget analytical edit also corrected 0/4 decisions, failed the target route and achieved 27/50 ordinary and 3/29 difficult successes.
+
+This was useful because the LLM found one shared numerical change that moved several action scores in the intended direction, but that local improvement was not enough to repair the sequence of decisions needed for navigation. It suggests that changing several margins is a different problem from repairing a complete behaviour, and that route-level evaluation remains essential.
+
 \end{document}
