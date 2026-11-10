@@ -4,9 +4,12 @@
 \usepackage{lmodern}
 \usepackage{hyperref}
 \usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage{listings}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{0.7em}
 \hypersetup{colorlinks=true,urlcolor=black,linkcolor=black}
+\lstset{basicstyle=\ttfamily\small, columns=fullflexible, frame=single}
 
 \title{Model Mechanic\\\large A small experiment in repairing neural networks without retraining}
 \author{}
@@ -94,5 +97,57 @@ The outcome I would be happiest with is not necessarily a model that repairs its
 \section*{Starting reference}
 Rikiyat, \emph{Weight-Space Programming}, blog article.\\
 \url{https://rikiyat.github.io/blog/weight-space-programming/}
+
+\section*{Project logbook}
+
+\subsection*{Milestone 1: a supervised gridworld baseline}
+
+\textbf{What I did.}
+I built a deterministic 7x7 gridworld. The robot starts in the top-left corner, the goal is in the bottom-right corner, and obstacles are placed between them. The policy chooses one of four actions: up, down, left or right. I also wrote an evaluator that separates ordinary held-out layouts from deliberately difficult layouts.
+
+\textbf{Why I did it.}
+I wanted a small experiment that I could understand completely before adding weight editing. I chose supervised imitation learning rather than reinforcement learning. A breadth-first search algorithm provides shortest paths, which gives the neural network clear training targets without adding the extra instability of reinforcement-learning training.
+
+\textbf{What I found.}
+The policy is a small multilayer perceptron. It receives three 7x7 channels: obstacle locations, the robot location and the goal location. These are flattened into 147 numbers. Its final layer produces four scores, one for each possible movement, and the highest score is selected.
+
+In one run, the baseline succeeded on 31 of 50 ordinary held-out layouts (62\%). It succeeded on 1 of 30 difficult layouts (3.3\%). This suggests that the model learned useful behaviour on layouts similar to its training distribution, but generalised poorly to denser obstacle arrangements. These results do not show that direct weight editing works, and they do not yet compare against fine-tuning.
+
+\textbf{A specific failure.}
+On difficult layout seed 30000, the policy ran for the 98-step limit and made 93 invalid moves. The robot moved down from the start to row 5, column 0, then repeatedly chose \texttt{down}. The cell below it, row 6, column 0, is an obstacle, so each action left the robot in the same position. The failure is genuinely reachable: the shortest-path expert reaches the goal in 14 valid steps on the same layout. The problem is therefore the learned policy's decisions, not an impossible map.
+
+At row 5, column 0, the four output scores were $[-4.411, 5.207, -3.977, 1.436]$ for up, down, left and right. The network preferred down by 3.771 over its next-best action, right, while the expert chose right. This is a clear mistaken preference, not a near-tie. All 29 failed difficult layouts in the saved evaluation had at least ten consecutive steps in the same position, so this kind of invalid-move loop was common rather than unique to seed 30000.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{outputs/baseline_episodes.png}
+\caption{One ordinary successful rollout and the difficult rollout for seed 30000. The dashed green line is the shortest-path expert; the blue line is the neural policy.}
+\end{figure}
+
+One useful piece of the environment is the explicit invalid-move check:
+
+\begin{lstlisting}[language=Python]
+invalid = (
+    not (0 <= proposed[0] < self.scenario.size)
+    or not (0 <= proposed[1] < self.scenario.size)
+    or proposed in self.scenario.obstacles
+)
+if not invalid:
+    self.position = proposed
+\end{lstlisting}
+
+An invalid action leaves the robot where it is and is counted during evaluation. The training data comes from the shortest-path actions:
+
+\begin{lstlisting}[language=Python]
+for action in shortest_path_actions(scenario):
+    observations.append(environment.observation())
+    actions.append(action)
+    environment.step(action)
+\end{lstlisting}
+
+This records the observation before each expert move and uses the move as the target for supervised training.
+
+\textbf{What I am doing next.}
+I am going to inspect this baseline and discuss what information would be needed to propose a safe weight edit. I will not add the LLM repair stage or the fine-tuning comparison until the evaluation criteria are clear.
 
 \end{document}
