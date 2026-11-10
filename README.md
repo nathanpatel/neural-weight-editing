@@ -34,13 +34,22 @@ The project includes a local virtual environment with the required packages. Fro
 
 The training command writes `outputs/baseline.pt`. The evaluation command writes `outputs/baseline_evaluation.json`, including each layout, trajectory, success result and invalid-move count. These output files are ignored by Git.
 
+The repository does not include trained checkpoints. Someone cloning it must run `train_baseline.py` first before running the evaluator or the weight-editing scripts. To make one LLM request after training, set `OPENAI_API_KEY` in the terminal and run:
+
+```bash
+./.venv/bin/python llm_weight_edit.py --request
+```
+
+The LLM result and edited checkpoint are also written under `outputs/` and are ignored by Git.
+The exact files from an individual run are therefore not included in a fresh clone; keep them locally if you want to inspect or reproduce that particular result.
+
 ## First milestone
 
 - [x] Build a simple 2D environment
 - [x] Train a small policy network
 - [x] Record reproducible failures on difficult layouts
-- [ ] Try one constrained weight edit
-- [ ] Compare behaviour before and after on separate test scenarios
+- [x] Try one constrained weight edit
+- [x] Compare behaviour before and after on separate test scenarios
 
 ## Reference
 

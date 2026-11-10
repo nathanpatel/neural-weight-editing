@@ -174,4 +174,31 @@ Here, \texttt{feature} is the hidden representation of the failing state with an
 
 I will next consider how to describe a failure and an allowed edit to an LLM, while keeping the same checks for local repair, full-episode success and regressions.
 
+\subsection*{Milestone 3: the first LLM-proposed weight edit}
+
+The article that motivated this project, \emph{Weight-Space Programming}, asks whether language models can reason about and directly edit the weights of neural networks. I wanted to try a much smaller, controlled version of that idea. I had already shown that a deliberate change to the final layer could alter the robot's behaviour, so I then wanted to see what an LLM would do if it had to choose the parameters and numerical changes itself.
+
+I gave it the small network architecture, the final-layer weights and biases, the grid and robot position from seed 30000, the hidden representation at that position, and the four action scores. I did not give it any held-out layouts or their results. I restricted it to at most 16 final-layer weight changes, with a maximum change of 0.25 per parameter and a total L2 limit of 0.61. It returned 16 changes to the final-layer weights, using changes of $\pm 0.15$ on eight hidden features. It did not change any biases.
+
+What I found interesting was that the LLM could look at the network's weights and activations, choose a small set of weights to change, and predict roughly how the action scores would respond. It was not given the analytical edit from the previous milestone. The edit did not fully repair the robot, but it did move the decision in the intended direction.
+
+The scores changed as follows:
+
+\begin{center}
+\begin{tabular}{lrr}
+Action & Original & Edited \\
+\hline
+Up & -4.411 & -4.411 \\
+Down & 5.207 & 4.017 \\
+Left & -3.977 & -3.977 \\
+Right & 1.436 & 2.626 \\
+\end{tabular}
+\end{center}
+
+The down score fell and the right score rose, while the other two scores were unchanged. Down still had the highest score, so the original failure remained. The robot moved right by two squares later in the episode, but then got stuck again and still failed to reach the goal.
+
+The edit improved the difficult held-out success rate, excluding seed 30000, from 1 of 29 layouts (3.4\%) to 5 of 29 (17.2\%). It also reduced ordinary success from 31 of 50 layouts (62\%) to 27 of 50 (54\%). I cannot say exactly why the other layouts changed: the same final-layer weights are used in every state, so a local change can affect many states, but the results alone do not show that the edit was targeted or that the LLM understood the network.
+
+The earlier analytical edit changed 66 parameters, whereas the LLM changed 16, even though both edits had an L2 size of about 0.600. This is not a fair equal-budget comparison, and I do not take the result as proof that the LLM understood the network. It is a useful first sign that an LLM can make a sensible, measurable change to a model's internal behaviour, even when that change is not enough to solve the complete task.
+
 \end{document}
