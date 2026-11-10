@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from llm_weight_edit import apply_patch, validate_patch
+from llm_weight_edit import apply_patch, parse_response, validate_patch
 from model import PolicyNetwork
 
 
@@ -64,3 +64,20 @@ def test_change_count_and_l2_limits_are_rejected() -> None:
     ]
     with pytest.raises(ValueError):
         validate_patch({"changes": too_large, "reason": "large"}, PolicyNetwork())
+
+
+def test_empty_response_is_recorded_as_empty() -> None:
+    response = type("Response", (), {"output_text": ""})()
+    assert parse_response(response) == (None, "")
+
+
+def test_non_object_response_is_rejected() -> None:
+    response = type("Response", (), {"output_text": "[]"})()
+    with pytest.raises(ValueError, match="not an object"):
+        parse_response(response)
+
+
+def test_invalid_json_response_is_rejected() -> None:
+    response = type("Response", (), {"output_text": "not json"})()
+    with pytest.raises(ValueError, match="invalid JSON"):
+        parse_response(response)

@@ -205,6 +205,19 @@ def apply_patch(model: PolicyNetwork, patch: dict[str, Any]) -> tuple[PolicyNetw
     }
 
 
+def parse_response(response: Any) -> tuple[dict[str, Any] | None, str]:
+    raw_text = response.output_text
+    if not raw_text:
+        return None, ""
+    try:
+        parsed = json.loads(raw_text)
+    except json.JSONDecodeError as error:
+        raise ValueError(f"model returned invalid JSON: {error.msg}") from error
+    if not isinstance(parsed, dict):
+        raise ValueError("model returned JSON that was not an object")
+    return parsed, raw_text
+
+
 def call_model(prompt: str) -> tuple[dict[str, Any] | None, str]:
     from openai import OpenAI
 
@@ -218,8 +231,7 @@ def call_model(prompt: str) -> tuple[dict[str, Any] | None, str]:
         ],
         text={"format": {"type": "json_schema", "name": "weight_patch", "strict": True, "schema": PATCH_SCHEMA}},
     )
-    raw_text = response.output_text
-    return (json.loads(raw_text) if raw_text else None), raw_text
+    return parse_response(response)
 
 
 def evaluate_edited_model(original: PolicyNetwork, edited: PolicyNetwork) -> dict[str, object]:
@@ -266,13 +278,34 @@ def main() -> None:
         print(f"USER INSTRUCTIONS\n{build_instructions()}")
         return
 
-    patch, raw_response = call_model(prompt)
     result: dict[str, Any] = {
         "model": MODEL,
         "reasoning_effort": REASONING_EFFORT,
         "prompt": prompt,
-        "raw_response": raw_response,
     }
+    try:
+        patch, raw_response = call_model(prompt)
+    except ValueError as error:
+        result["status"] = "invalid_response"
+        result["error"] = str(error)
+        result["raw_response"] = ""
+        output_path = Path("outputs/llm_weight_edit_result.json")
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(result, indent=2), encoding="utf-8")
+        print(json.dumps(result, indent=2))
+        return
+    except Exception as error:
+        result["status"] = "request_failed"
+        result["error_type"] = type(error).__name__
+        result["error"] = str(error)
+        result["raw_response"] = ""
+        output_path = Path("outputs/llm_weight_edit_result.json")
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(result, indent=2), encoding="utf-8")
+        print(json.dumps(result, indent=2))
+        return
+
+    result["raw_response"] = raw_response
     if patch is None:
         result["status"] = "empty_response"
     else:
