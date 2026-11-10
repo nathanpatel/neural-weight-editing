@@ -160,6 +160,8 @@ The local decision was repaired: the scores for up, down, left and right changed
 
 The edit reduced ordinary held-out success from 62\% to 48\%. On difficult layouts excluding the target scenario, success increased from 3.4\% to 24.1\%. This is an interesting but mixed result: a small edit changed behaviour beyond the original state, helping some difficult layouts while harming ordinary ones. It is not evidence that an LLM can reason about weights, and it does not show that the navigation problem has been solved.
 
+Looking at the same layouts more closely, the edit increased the right-minus-down score margin in every visited state we checked. It helped 7 ordinary layouts but caused 14 ordinary regressions; on difficult layouts it helped 7 and caused 1 regression. This suggests that the improved difficult-layout score partly comes from a broader change in action preference, not a repair limited to the original failure.
+
 The essential part of the edit was:
 
 \begin{lstlisting}[language=Python]
