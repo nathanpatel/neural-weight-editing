@@ -1,0 +1,98 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.7em}
+\hypersetup{colorlinks=true,urlcolor=black,linkcolor=black}
+
+\title{Model Mechanic\\\large A small experiment in repairing neural networks without retraining}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Where the idea came from}
+I was genuinely interested to read the article \emph{Weight-Space Programming} by Rikiyat:\\
+\url{https://rikiyat.github.io/blog/weight-space-programming/}
+
+The idea that caught my attention was simple, but quite surprising:
+
+\textbf{Instead of retraining a neural network when it behaves incorrectly, can an LLM understand what's wrong and directly modify its weights to fix it?}
+
+The article explores the idea of using language models to reason about and change the weights of other neural networks. It made me wonder what this would look like outside an isolated experiment. Even if an edit fixes one mistake, how would we know it had not broken something else? And what would we need before we could trust that change in a deployed system?
+
+This project is not an attempt to claim the original idea. I want to take inspiration from it and build a small, testable system around the practical question of whether an AI-generated weight edit should be accepted or rejected.
+
+\section*{The project}
+I want to build a simple tool that notices when a small neural network fails, lets an LLM propose a targeted change to its weights, and tests whether that change really helps.
+
+The first example will be a simulated warehouse robot. A small neural network will choose how the robot moves around a simple two-dimensional environment. I will deliberately create a situation in which the robot gets stuck or makes a poor decision.
+
+The question is whether an LLM, given information about the network and the failure, can suggest a small weight edit that improves the behaviour without retraining the whole network.
+
+The important part is not just getting one successful demonstration. It is checking whether the edited model still works in situations where the original model was already doing well.
+
+\section*{How it would work}
+\begin{enumerate}[leftmargin=*]
+\item \textbf{Detect a failure.} Run the robot through a set of scenarios and record where its behaviour goes wrong.
+\item \textbf{Explain the failure to an LLM.} Give it a description of what happened, the model architecture, and a limited view of the relevant weights or activations.
+\item \textbf{Propose an edit.} Ask it to suggest a small, constrained modification to the network's weights. This is a proposed edit, not a guarantee of improvement.
+\item \textbf{Test the edited model.} Run the new version through the original failure and a separate set of scenarios it has not been tuned against.
+\item \textbf{Accept or reject.} Keep the change only if it passes predefined checks. Otherwise retain the original model. Save both versions so that any accepted change can be reversed.
+\end{enumerate}
+
+\section*{What I would compare}
+I would test three approaches on the same scenarios:
+\begin{enumerate}[leftmargin=*]
+\item \textbf{Do nothing:} keep the original model as a baseline.
+\item \textbf{Fine-tune:} use additional examples of the failure to update the model through ordinary training.
+\item \textbf{Edit the weights directly:} use the LLM's proposed change, without gradient-based training for that edit.
+\end{enumerate}
+
+I would measure how often the robot succeeds, how often it gets stuck, and whether fixing one situation causes regressions elsewhere. I would also record how much each repair costs in time and computation, and how large a change was made to the weights.
+
+It is entirely possible that direct weight editing performs worse than fine-tuning, or that the LLM cannot make useful edits consistently. That would still be a useful result. The aim is to test the idea properly, not to manufacture a success.
+
+\section*{The deployment side}
+I want this to feel like a small real system rather than just a notebook. The model would be served through a simple Python API, with a record of each model version, its test results, and whether it was approved.
+
+A basic dashboard would let someone replay a failure, inspect the proposed repair, compare the before-and-after behaviour, and approve or reject the new version. A rejected edit would never replace the deployed model. An accepted edit could be rolled back.
+
+The user interface would be deliberately simple. Its purpose is to make the decision understandable to someone who did not build the neural network.
+
+The likely tools are PyTorch for the model, Python and FastAPI for serving it, Docker for packaging, and a small web interface for reviewing results. I would add these only when the core experiment works.
+
+\section*{Why I find it interesting}
+The research question is unusual, but the practical problem is familiar: models can fail in ways that were not obvious during development. Fixing a single failure is not enough if the change makes the system less reliable overall.
+
+I am particularly interested in the boundary between a clever AI demonstration and something that could actually be used. How should a repair be evaluated? What evidence would make someone trust it? When is it better to reject the change and retrain instead?
+
+It also combines areas I enjoy: machine learning, control, software engineering, and explaining technical decisions clearly to the people who rely on a system.
+
+\section*{A sensible first version}
+I do not want to start by building an entire platform. The first milestone is much smaller:
+
+\begin{enumerate}[leftmargin=*]
+\item Train one small neural network to control a robot in a simple 2D environment.
+\item Find one repeatable failure.
+\item Ask an LLM to propose one constrained weight edit.
+\item Compare the original and edited networks on the failure and on other test scenarios.
+\item Write down exactly what happened, including failures and limitations.
+\end{enumerate}
+
+Only if that works well enough to justify further work would I add automated repair attempts, a proper API, versioning, rollback, and the dashboard.
+
+\section*{What I hope to have at the end}
+A public GitHub repository with reproducible experiments, a short explanation of the method, results comparing direct edits with fine-tuning, and a simple demonstration of how a proposed repair is tested before deployment.
+
+The outcome I would be happiest with is not necessarily a model that repairs itself perfectly. It is a clear answer to a smaller question: under what conditions, if any, does an LLM-generated weight edit improve a deployed model without causing unacceptable regressions?
+
+\section*{Starting reference}
+Rikiyat, \emph{Weight-Space Programming}, blog article.\\
+\url{https://rikiyat.github.io/blog/weight-space-programming/}
+
+\end{document}
